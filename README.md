@@ -44,6 +44,8 @@
 
 * Parameters: approx 8 million
 
+![Turbo Test Imgaes] (C:\Users\pooja\OneDrive\Documents\IIT MANDI ASSIGNMENT\coding ass\New folder\capstone project\TURBO_Unet Model.zip)
+
 # Performance Summary
 - The models were evaluated on the Test Set (3,120 slices) using standard medical image quality metrics: SSIM, PSNR (dB), and MAE (HU).
 1) U-Net + Local Decoder : Test SSIM = 0.8725 (Highest) | Test PSNR (dB) = 25.17 | Test MAE (HU) = 69 

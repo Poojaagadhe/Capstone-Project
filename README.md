@@ -5,7 +5,7 @@
 - Topic: MRI-to-CT Image Translation Using Deep Learning
 
 # Project Overview:
--This capstone project focuses on developing and evaluating deep learning models for automated medical image translation from T1-weighted brain MRI scans to synthetic Computed Tomography (sCT) images.
+This capstone project focuses on developing and evaluating deep learning models for automated medical image translation from T1-weighted brain MRI scans to synthetic Computed Tomography (sCT) images.
 -The primary goal is to support MRI-only radiotherapy treatment planning. By generating highly accurate sCTs, we can:
 -Streamline Workflows: Eliminate the need for dual-imaging (MRI + CT).
 -Reduce Patient Burden: Decrease patient exposure to ionizing radiation.
@@ -13,7 +13,7 @@
 -Three distinct deep learning models were implemented and rigorously tested. All three achieved clinically acceptable accuracy (Mean Absolute Error, {MAE} < 100{HU}), demonstrating the strong viability of an MRI-only workflow.
 
  # Architectures and Key Features:
- --The project evaluated three specialized U-Net variants on a dataset of 181 brain scans.
+ The project evaluated three specialized U-Net variants on a dataset of 181 brain scans.
 
  # Dataset and Preprocessing
 - Source Data: 181 unique T1-weighted brain MRI and corresponding CT scans in NIFTI (.nii) format.

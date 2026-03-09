@@ -15,6 +15,12 @@
  # Architectures and Key Features:
  --The project evaluated three specialized U-Net variants on a dataset of 181 brain scans.
 
+ # Dataset and Preprocessing
+- Source Data: 181 unique T1-weighted brain MRI and corresponding CT scans in NIFTI (.nii) format.
+- Processed Data: 21,183 high-quality 2D slices.
+- Critical Splitting: Data splitting was performed at the patient level (70% Train, 15% Validation, 15% Test) to strictly prevent data leakage and ensure that performance metrics reflect true model generalization.
+- Preprocessing: Includes image resizing to (256x256) intensity clipping for outliers, and Min-Max normalization to the range {-1, 1}.
+
 # 1. U-Net with Local Decoder (Best Performer)
  * Architecture: Dual-component design featuring a standard U-Net encoder coupled with a specialized local decoder.
 
@@ -57,11 +63,7 @@
 - Efficiency: The Turbo U-Net offers an excellent accuracy-efficiency trade-off, with only 8 million parameters.
 - Clinical Viability: All models maintained {MAE} < 100 HU , validating their potential for clinical dose calculation accuracy.
 
-# Dataset and Preprocessing
-- Source Data: 181 unique T1-weighted brain MRI and corresponding CT scans in NIFTI (.nii) format.
-- Processed Data: 21,183 high-quality 2D slices.
-- Critical Splitting: Data splitting was performed at the patient level (70% Train, 15% Validation, 15% Test) to strictly prevent data leakage and ensure that performance metrics reflect true model generalization.
-- Preprocessing: Includes image resizing to (256x256) intensity clipping for outliers, and Min-Max normalization to the range {-1, 1}.
+
 
 # Future Work
 - To translate these research findings into clinical practice, the following directions are proposed:

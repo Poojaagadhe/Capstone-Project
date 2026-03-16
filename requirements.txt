@@ -1,24 +1,6 @@
-# Core Deep Learning Framework
--torch>=2.0.0
--torchvision>=0.15.0
-
-# Fundamental Image Utilities
-Pillow>=9.0.0
-
-# Scientific Computing and Data Handling
- -numpy>=1.22.0
- -pandas>=1.5.0
- -scikit-learn>=1.2.0
-
-# Medical Image Input/Output (for NIFTI files - .nii)
-- nibabel>=5.0.0
-- monai>=1.0.0 # Highly recommended for medical DL workflows
-- h5py>=3.7.0 # Useful for fast loading of large preprocessed datasets
-
-# Image Processing and Metrics (SSIM, PSNR)
- -scikit-image>=0.19.0
-
-# Utilities and Logging
- -tqdm>=4.65.0
- -matplotlib>=3.6.0
- -PyYAML>=6.0  # Required if using YAML config files.
+torch
+torchvision
+numpy
+opencv-python
+streamlit
+pillow

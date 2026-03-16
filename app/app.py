@@ -188,8 +188,9 @@ with tab_examples:
         with col3:
             st.image(pred_ct, caption="Predicted CT", use_container_width=True)
 
-        if st.button("Show Another Example"):
-            st.session_state.example_sample = random.choice(samples)
+        if st.button("Show Another Example", key="example_button"):
+           st.session_state.example_sample = random.choice(samples)
+           st.rerun()
 
     except:
         st.warning("Example test samples not found.")
@@ -202,25 +203,29 @@ with tab_dashboard:
 
     st.subheader("Training Metrics")
 
-    try:
+    history_path = "results/training_history.json"
+    results_path = "results/test_set_results.json"
 
-        with open("results/training_history.json") as f:
+    if os.path.exists(history_path) and os.path.exists(results_path):
+
+        with open(history_path) as f:
             history = json.load(f)
 
-        with open("results/test_set_results.json") as f:
+        with open(results_path) as f:
             results = json.load(f)
 
-        st.line_chart(history["generator_loss"])
+        # training loss
+        if "generator_loss" in history:
+            st.line_chart(history["generator_loss"])
 
         m1, m2, m3 = st.columns(3)
 
-        m1.metric("SSIM", results["SSIM"])
-        m2.metric("PSNR", results["PSNR"])
-        m3.metric("MAE", results["MAE"])
+        m1.metric("SSIM", results.get("SSIM", "N/A"))
+        m2.metric("PSNR", results.get("PSNR", "N/A"))
+        m3.metric("MAE", results.get("MAE", "N/A"))
 
-    except:
-        st.warning("Training metrics not found.")
-
+    else:
+        st.info("Training metrics file not found in results folder.")
 
 # ======================================================
 # MODEL INFO TAB
@@ -269,4 +274,3 @@ Framework: PyTorch
 
 
 
-        

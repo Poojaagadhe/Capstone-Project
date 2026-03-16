@@ -30,12 +30,15 @@ model = get_model()
 
 
 # ---------------- HEADER ----------------
-st.markdown("""
+st.markdown(
+"""
 <h1 style='text-align:center;'>MRI → Synthetic CT Generator</h1>
 <p style='text-align:center; font-size:18px;'>
 Deep Learning System for MRI-only Radiotherapy Planning
 </p>
-""", unsafe_allow_html=True)
+""",
+unsafe_allow_html=True
+)
 
 st.divider()
 
@@ -46,30 +49,36 @@ st.subheader("Model Information")
 c1, c2, c3 = st.columns(3)
 
 with c1:
-    st.info("""
+    st.info(
+"""
 **Architecture**
 
 Pix2Pix U-Net Generator  
 Encoder–Decoder with Skip Connections
-""")
+"""
+)
 
 with c2:
-    st.info("""
+    st.info(
+"""
 **Dataset**
 
 181 MRI–CT paired scans  
 21,183 processed slices  
 Resolution: 256 × 256
-""")
+"""
+)
 
 with c3:
-    st.info("""
+    st.info(
+"""
 **Training Setup**
 
 Loss: L1 + Feature Matching  
 PatchGAN Discriminator  
 Framework: PyTorch
-""")
+"""
+)
 
 
 # ---------------- PERFORMANCE METRICS ----------------
@@ -92,7 +101,11 @@ results_dir = "results/pix2pix_unet"
 try:
 
     samples = [f for f in os.listdir(results_dir) if f.endswith(".png")]
-    sample_file = random.choice(samples)
+
+    if "example_sample" not in st.session_state:
+        st.session_state.example_sample = random.choice(samples)
+
+    sample_file = st.session_state.example_sample
 
     example_img = Image.open(os.path.join(results_dir, sample_file))
     example_np = np.array(example_img)
@@ -121,29 +134,32 @@ except:
 st.divider()
 
 
-# ---------------- SIDEBAR CONTROLS ----------------
+# ---------------- SIDEBAR ----------------
 st.sidebar.header("Controls")
-
-mode = st.sidebar.radio(
-    "Input Type",
-    ["Single MRI Image", "MRI Volume (.nii)"]
-)
 
 show_heatmap = st.sidebar.checkbox("Show Error Heatmap")
 show_dashboard = st.sidebar.checkbox("Show Training Dashboard")
 
 
-# =====================================================
-# SINGLE IMAGE MODE
-# =====================================================
-if mode == "Single MRI Image":
+# ---------------- FILE UPLOADER ----------------
+st.subheader("Upload MRI")
 
-    uploaded_file = st.file_uploader(
-        "Upload MRI Image",
-        type=["png", "jpg", "jpeg"]
-    )
+uploaded_file = st.file_uploader(
+    "Upload MRI Image (.png) or MRI Volume (.nii)",
+    type=["png", "nii", "nii.gz"]
+)
 
-    if uploaded_file:
+if uploaded_file:
+
+    file_name = uploaded_file.name.lower()
+
+
+    # =====================================================
+    # PNG IMAGE MODE
+    # =====================================================
+    if file_name.endswith(".png"):
+
+        st.success("Detected MRI Image (.png)")
 
         image = Image.open(uploaded_file).convert("L")
         image_np = np.array(image)
@@ -187,22 +203,17 @@ if mode == "Single MRI Image":
             st.pyplot(fig)
 
 
-# =====================================================
-# MRI VOLUME MODE
-# =====================================================
-else:
+    # =====================================================
+    # NII VOLUME MODE
+    # =====================================================
+    elif file_name.endswith(".nii") or file_name.endswith(".nii.gz"):
 
-    uploaded_file = st.file_uploader(
-        "Upload MRI Volume",
-        type=["nii", "nii.gz"]
-    )
-
-    if uploaded_file:
+        st.success("Detected MRI Volume (.nii)")
 
         volume = nib.load(uploaded_file).get_fdata()
 
         slice_index = st.slider(
-            "Select Slice",
+            "Select MRI Slice",
             0,
             volume.shape[2] - 1,
             volume.shape[2] // 2
@@ -278,4 +289,5 @@ if show_dashboard:
 
     except:
         st.warning("Metrics files not found in results folder.")
+
         

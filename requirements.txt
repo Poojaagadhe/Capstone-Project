@@ -1,6 +1,10 @@
+streamlit>=1.55.0
 torch>=2.0.0
-torchvision
-numpy
-opencv-python
-streamlit
-pillow
+torchvision>=0.15.0
+numpy>=1.24
+opencv-python>=4.8
+pillow>=10.0
+pandas>=2.0
+matplotlib>=3.8
+nibabel>=5.2
+streamlit-image-comparison>=0.0.4

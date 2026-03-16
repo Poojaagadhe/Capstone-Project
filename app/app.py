@@ -2,6 +2,8 @@ import streamlit as st
 import numpy as np
 import nibabel as nib
 import json
+import os
+import random
 import matplotlib.pyplot as plt
 from PIL import Image
 
@@ -38,12 +40,12 @@ Deep Learning System for MRI-only Radiotherapy Planning
 st.divider()
 
 
-# ---------------- MODEL INFO PANEL ----------------
+# ---------------- MODEL INFORMATION ----------------
 st.subheader("Model Information")
 
-col1, col2, col3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
 
-with col1:
+with c1:
     st.info("""
 **Architecture**
 
@@ -51,16 +53,16 @@ Pix2Pix U-Net Generator
 Encoder–Decoder with Skip Connections
 """)
 
-with col2:
+with c2:
     st.info("""
 **Dataset**
 
-181 paired MRI-CT scans  
+181 MRI–CT paired scans  
 21,183 processed slices  
 Resolution: 256 × 256
 """)
 
-with col3:
+with c3:
     st.info("""
 **Training Setup**
 
@@ -82,24 +84,39 @@ m3.metric("MAE", "39.07 HU")
 st.divider()
 
 
-# ---------------- EXAMPLE RESULTS ----------------
+# ---------------- RANDOM EXAMPLE RESULTS ----------------
 st.subheader("Example Results")
 
-c1, c2 = st.columns(2)
+results_dir = "results/pix2pix_unet"
 
-with c1:
-    st.image(
-        "assets/example_mri.png",
-        caption="Input MRI",
-        use_container_width=True
-    )
+try:
 
-with c2:
-    st.image(
-        "assets/example_ct.png",
-        caption="Generated Synthetic CT",
-        use_container_width=True
-    )
+    samples = [f for f in os.listdir(results_dir) if f.endswith(".png")]
+    sample_file = random.choice(samples)
+
+    example_img = Image.open(os.path.join(results_dir, sample_file))
+    example_np = np.array(example_img)
+
+    width = example_np.shape[1]
+    third = width // 3
+
+    mri = example_np[:, :third]
+    gt_ct = example_np[:, third:2*third]
+    pred_ct = example_np[:, 2*third:]
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.image(mri, caption="Input MRI", use_container_width=True)
+
+    with col2:
+        st.image(gt_ct, caption="Ground Truth CT", use_container_width=True)
+
+    with col3:
+        st.image(pred_ct, caption="Predicted CT", use_container_width=True)
+
+except:
+    st.warning("Example test samples not found.")
 
 st.divider()
 
@@ -148,7 +165,6 @@ if mode == "Single MRI Image":
             st.subheader("Generated CT")
             st.image(ct_img, clamp=True)
 
-        # Comparison slider
         st.subheader("MRI ↔ Synthetic CT Comparison")
 
         image_comparison(
@@ -158,7 +174,6 @@ if mode == "Single MRI Image":
             label2="Synthetic CT"
         )
 
-        # Error heatmap
         if show_heatmap:
 
             st.subheader("Error Heatmap")
@@ -173,7 +188,7 @@ if mode == "Single MRI Image":
 
 
 # =====================================================
-# MRI VOLUME MODE (.nii)
+# MRI VOLUME MODE
 # =====================================================
 else:
 
@@ -263,3 +278,4 @@ if show_dashboard:
 
     except:
         st.warning("Metrics files not found in results folder.")
+        

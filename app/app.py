@@ -43,230 +43,164 @@ unsafe_allow_html=True
 st.divider()
 
 
-# ---------------- MODEL INFORMATION ----------------
-st.subheader("Model Information")
-
-c1, c2, c3 = st.columns(3)
-
-with c1:
-    st.info(
-"""
-**Architecture**
-
-Pix2Pix U-Net Generator  
-Encoder–Decoder with Skip Connections
-"""
-)
-
-with c2:
-    st.info(
-"""
-**Dataset**
-
-181 MRI–CT paired scans  
-21,183 processed slices  
-Resolution: 256 × 256
-"""
-)
-
-with c3:
-    st.info(
-"""
-**Training Setup**
-
-Loss: L1 + Feature Matching  
-PatchGAN Discriminator  
-Framework: PyTorch
-"""
+# ---------------- TABS ----------------
+tab_demo, tab_examples, tab_dashboard, tab_info = st.tabs(
+    ["Demo", "Examples", "Training Dashboard", "Model Info"]
 )
 
 
-# ---------------- PERFORMANCE METRICS ----------------
-st.subheader("Model Performance")
+# ======================================================
+# DEMO TAB
+# ======================================================
+with tab_demo:
 
-m1, m2, m3 = st.columns(3)
+    st.subheader("Upload MRI")
 
-m1.metric("SSIM", "0.94")
-m2.metric("PSNR", "26.04 dB")
-m3.metric("MAE", "39.07 HU")
+    uploaded_file = st.file_uploader(
+        "Upload MRI Image (.png) or MRI Volume (.nii)",
+        type=["png", "nii", "nii.gz"]
+    )
 
-st.divider()
+    show_heatmap = st.checkbox("Show Error Heatmap")
 
+    if uploaded_file:
 
-# ---------------- RANDOM EXAMPLE RESULTS ----------------
-st.subheader("Example Results")
+        file_name = uploaded_file.name.lower()
 
-results_dir = "results/pix2pix_unet"
+        # ---------- PNG IMAGE ----------
+        if file_name.endswith(".png"):
 
-try:
+            image = Image.open(uploaded_file).convert("L")
+            image_np = np.array(image)
 
-    samples = [f for f in os.listdir(results_dir) if f.endswith(".png")]
+            tensor = preprocess_image(image_np)
 
-    if "example_sample" not in st.session_state:
-        st.session_state.example_sample = random.choice(samples)
+            with st.spinner("Generating synthetic CT..."):
+                output = generate_ct(model, tensor)
 
-    sample_file = st.session_state.example_sample
+            ct_img = output.squeeze().numpy()
 
-    example_img = Image.open(os.path.join(results_dir, sample_file))
-    example_np = np.array(example_img)
+            col1, col2 = st.columns(2)
 
-    width = example_np.shape[1]
-    third = width // 3
+            with col1:
+                st.image(image_np, caption="Input MRI", use_container_width=True)
 
-    mri = example_np[:, :third]
-    gt_ct = example_np[:, third:2*third]
-    pred_ct = example_np[:, 2*third:]
+            with col2:
+                st.image(ct_img, caption="Generated CT", use_container_width=True)
 
-    col1, col2, col3 = st.columns(3)
+            st.subheader("MRI ↔ Synthetic CT Comparison")
 
-    with col1:
-        st.image(mri, caption="Input MRI", use_container_width=True)
+            image_comparison(
+                img1=image_np,
+                img2=ct_img,
+                label1="MRI",
+                label2="Synthetic CT"
+            )
 
-    with col2:
-        st.image(gt_ct, caption="Ground Truth CT", use_container_width=True)
+            if show_heatmap:
 
-    with col3:
-        st.image(pred_ct, caption="Predicted CT", use_container_width=True)
+                st.subheader("Error Heatmap")
 
-except:
-    st.warning("Example test samples not found.")
+                diff = np.abs(ct_img - image_np)
 
-st.divider()
+                fig, ax = plt.subplots()
+                heat = ax.imshow(diff, cmap="hot")
+                fig.colorbar(heat)
 
-
-# ---------------- SIDEBAR ----------------
-st.sidebar.header("Controls")
-
-show_heatmap = st.sidebar.checkbox("Show Error Heatmap")
-show_dashboard = st.sidebar.checkbox("Show Training Dashboard")
-
-
-# ---------------- FILE UPLOADER ----------------
-st.subheader("Upload MRI")
-
-uploaded_file = st.file_uploader(
-    "Upload MRI Image (.png) or MRI Volume (.nii)",
-    type=["png", "nii", "nii.gz"]
-)
-
-if uploaded_file:
-
-    file_name = uploaded_file.name.lower()
+                st.pyplot(fig)
 
 
-    # =====================================================
-    # PNG IMAGE MODE
-    # =====================================================
-    if file_name.endswith(".png"):
+        # ---------- NII VOLUME ----------
+        else:
 
-        st.success("Detected MRI Image (.png)")
+            volume = nib.load(uploaded_file).get_fdata()
 
-        image = Image.open(uploaded_file).convert("L")
-        image_np = np.array(image)
+            slice_index = st.slider(
+                "Select MRI Slice",
+                0,
+                volume.shape[2] - 1,
+                volume.shape[2] // 2
+            )
 
-        tensor = preprocess_image(image_np)
+            slice_img = volume[:, :, slice_index]
 
-        with st.spinner("Generating synthetic CT..."):
-            output = generate_ct(model, tensor)
+            tensor = preprocess_image(slice_img)
 
-        ct_img = output.squeeze().numpy()
+            with st.spinner("Generating synthetic CT..."):
+                output = generate_ct(model, tensor)
 
-        col1, col2 = st.columns(2)
+            ct_img = output.squeeze().numpy()
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.image(slice_img, caption="MRI Slice", use_container_width=True)
+
+            with col2:
+                st.image(ct_img, caption="Generated CT", use_container_width=True)
+
+            st.subheader("MRI ↔ Synthetic CT Comparison")
+
+            image_comparison(
+                img1=slice_img,
+                img2=ct_img,
+                label1="MRI",
+                label2="Synthetic CT"
+            )
+
+
+# ======================================================
+# EXAMPLES TAB
+# ======================================================
+with tab_examples:
+
+    st.subheader("Example Results")
+
+    results_dir = "results/pix2pix_unet"
+
+    try:
+
+        samples = [f for f in os.listdir(results_dir) if f.endswith(".png")]
+
+        if "example_sample" not in st.session_state:
+            st.session_state.example_sample = random.choice(samples)
+
+        sample_file = st.session_state.example_sample
+
+        example_img = Image.open(os.path.join(results_dir, sample_file))
+        example_np = np.array(example_img)
+
+        width = example_np.shape[1]
+        third = width // 3
+
+        mri = example_np[:, :third]
+        gt_ct = example_np[:, third:2*third]
+        pred_ct = example_np[:, 2*third:]
+
+        col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.subheader("Input MRI")
-            st.image(image_np, clamp=True)
+            st.image(mri, caption="Input MRI", use_container_width=True)
 
         with col2:
-            st.subheader("Generated CT")
-            st.image(ct_img, clamp=True)
+            st.image(gt_ct, caption="Ground Truth CT", use_container_width=True)
 
-        st.subheader("MRI ↔ Synthetic CT Comparison")
+        with col3:
+            st.image(pred_ct, caption="Predicted CT", use_container_width=True)
 
-        image_comparison(
-            img1=image_np,
-            img2=ct_img,
-            label1="MRI",
-            label2="Synthetic CT"
-        )
+        if st.button("Show Another Example"):
+            st.session_state.example_sample = random.choice(samples)
 
-        if show_heatmap:
-
-            st.subheader("Error Heatmap")
-
-            diff = np.abs(ct_img - image_np)
-
-            fig, ax = plt.subplots()
-            heat = ax.imshow(diff, cmap="hot")
-            fig.colorbar(heat)
-
-            st.pyplot(fig)
+    except:
+        st.warning("Example test samples not found.")
 
 
-    # =====================================================
-    # NII VOLUME MODE
-    # =====================================================
-    elif file_name.endswith(".nii") or file_name.endswith(".nii.gz"):
+# ======================================================
+# TRAINING DASHBOARD TAB
+# ======================================================
+with tab_dashboard:
 
-        st.success("Detected MRI Volume (.nii)")
-
-        volume = nib.load(uploaded_file).get_fdata()
-
-        slice_index = st.slider(
-            "Select MRI Slice",
-            0,
-            volume.shape[2] - 1,
-            volume.shape[2] // 2
-        )
-
-        slice_img = volume[:, :, slice_index]
-
-        tensor = preprocess_image(slice_img)
-
-        with st.spinner("Generating synthetic CT..."):
-            output = generate_ct(model, tensor)
-
-        ct_img = output.squeeze().numpy()
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.subheader("MRI Slice")
-            st.image(slice_img, clamp=True)
-
-        with col2:
-            st.subheader("Generated CT")
-            st.image(ct_img, clamp=True)
-
-        st.subheader("MRI ↔ Synthetic CT Comparison")
-
-        image_comparison(
-            img1=slice_img,
-            img2=ct_img,
-            label1="MRI",
-            label2="Synthetic CT"
-        )
-
-        if show_heatmap:
-
-            st.subheader("Error Heatmap")
-
-            diff = np.abs(ct_img - slice_img)
-
-            fig, ax = plt.subplots()
-            heat = ax.imshow(diff, cmap="hot")
-            fig.colorbar(heat)
-
-            st.pyplot(fig)
-
-
-# =====================================================
-# TRAINING DASHBOARD
-# =====================================================
-if show_dashboard:
-
-    st.divider()
-    st.header("Training Metrics Dashboard")
+    st.subheader("Training Metrics")
 
     try:
 
@@ -276,18 +210,63 @@ if show_dashboard:
         with open("results/test_set_results.json") as f:
             results = json.load(f)
 
-        st.subheader("Generator Training Loss")
         st.line_chart(history["generator_loss"])
 
-        st.subheader("Evaluation Metrics")
+        m1, m2, m3 = st.columns(3)
 
-        metric_cols = st.columns(3)
-
-        metric_cols[0].metric("SSIM", results["SSIM"])
-        metric_cols[1].metric("PSNR", results["PSNR"])
-        metric_cols[2].metric("MAE", results["MAE"])
+        m1.metric("SSIM", results["SSIM"])
+        m2.metric("PSNR", results["PSNR"])
+        m3.metric("MAE", results["MAE"])
 
     except:
-        st.warning("Metrics files not found in results folder.")
+        st.warning("Training metrics not found.")
+
+
+# ======================================================
+# MODEL INFO TAB
+# ======================================================
+with tab_info:
+
+    st.subheader("Model Information")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.info(
+"""
+**Architecture**
+
+Pix2Pix U-Net Generator  
+Encoder–Decoder with Skip Connections
+"""
+        )
+
+    with c2:
+        st.info(
+"""
+**Dataset**
+
+181 MRI–CT paired scans  
+21,183 slices  
+Resolution: 256 × 256
+"""
+        )
+
+    with c3:
+        st.info(
+"""
+**Training**
+
+Loss: L1 + Feature Matching  
+PatchGAN Discriminator  
+Framework: PyTorch
+"""
+        )
+
+
+
+
+
+
 
         

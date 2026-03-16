@@ -214,15 +214,36 @@ with tab_dashboard:
         with open(results_path) as f:
             results = json.load(f)
 
-        # training loss
+        # ---------------- Training Loss ----------------
         if "generator_loss" in history:
             st.line_chart(history["generator_loss"])
 
+        # ---------------- Metrics ----------------
+        ssim_mean = results.get("ssim", {}).get("mean")
+        ssim_std  = results.get("ssim", {}).get("std")
+
+        psnr_mean = results.get("psnr", {}).get("mean")
+        psnr_std  = results.get("psnr", {}).get("std")
+
+        mae_mean = results.get("mae", {}).get("mean")
+        mae_std  = results.get("mae", {}).get("std")
+
         m1, m2, m3 = st.columns(3)
 
-        m1.metric("SSIM", results.get("SSIM", "N/A"))
-        m2.metric("PSNR", results.get("PSNR", "N/A"))
-        m3.metric("MAE", results.get("MAE", "N/A"))
+        if ssim_mean is not None:
+            m1.metric("SSIM", f"{ssim_mean:.3f}", f"±{ssim_std:.3f}")
+        else:
+            m1.metric("SSIM", "N/A")
+
+        if psnr_mean is not None:
+            m2.metric("PSNR", f"{psnr_mean:.2f} dB", f"±{psnr_std:.2f}")
+        else:
+            m2.metric("PSNR", "N/A")
+
+        if mae_mean is not None:
+            m3.metric("MAE", f"{mae_mean:.2f} HU", f"±{mae_std:.2f}")
+        else:
+            m3.metric("MAE", "N/A")
 
     else:
         st.info("Training metrics file not found in results folder.")

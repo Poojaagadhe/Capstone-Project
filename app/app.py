@@ -4,6 +4,7 @@ sys.path.append(os.path.abspath("."))
 
 import streamlit as st
 import numpy as np
+import torch
 import nibabel as nib
 import json
 import random

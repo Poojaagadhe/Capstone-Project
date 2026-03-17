@@ -134,6 +134,9 @@ with tab_demo:
 
             ct_img = output.squeeze().cpu().numpy()
 
+             # normalize to 0-1
+            ct_img = (ct_img - ct_img.min()) / (ct_img.max() - ct_img.min() + 1e-8)
+
             col1, col2 = st.columns(2)
 
             with col1:

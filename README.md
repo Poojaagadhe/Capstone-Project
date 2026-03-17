@@ -1,73 +1,325 @@
-# MRI-to-CT Image Translation Using Deep Learning
+# MRI → CT Image Translation using Deep Learning
 
-- Student: POOJA VILAS GADHE
-- Student Code: IITMCS_24061184
-- Topic: MRI-to-CT Image Translation Using Deep Learning
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-DeepLearning-red)
+![Streamlit](https://img.shields.io/badge/Streamlit-App-orange)
+![Medical Imaging](https://img.shields.io/badge/Medical-Imaging-green)
 
-# Project Overview:
-This capstone project focuses on developing and evaluating deep learning models for automated medical image translation from T1-weighted brain MRI scans to synthetic Computed Tomography (sCT) images.
--The primary goal is to support MRI-only radiotherapy treatment planning. By generating highly accurate sCTs, we can:
--Streamline Workflows: Eliminate the need for dual-imaging (MRI + CT).
--Reduce Patient Burden: Decrease patient exposure to ionizing radiation.
--Enhance Precision: Avoid registration errors inherent in manual image fusion.
--Three distinct deep learning models were implemented and rigorously tested. All three achieved clinically acceptable accuracy (Mean Absolute Error, {MAE} < 100{HU}), demonstrating the strong viability of an MRI-only workflow.
+---
 
- # Architectures and Key Features:
- The project evaluated three specialized U-Net variants on a dataset of 181 brain scans.
+## Student Information
 
- # Dataset and Preprocessing
-- Source Data: 181 unique T1-weighted brain MRI and corresponding CT scans in NIFTI (.nii) format.
-- Processed Data: 21,183 high-quality 2D slices.
-- Critical Splitting: Data splitting was performed at the patient level (70% Train, 15% Validation, 15% Test) to strictly prevent data leakage and ensure that performance metrics reflect true model generalization.
-- Preprocessing: Includes image resizing to (256x256) intensity clipping for outliers, and Min-Max normalization to the range {-1, 1}.
+**Student:** Pooja Vilas Gadhe  
+**Student Code:** IITMCS_24061184  
+**Institution:** IIT Mandi (Online Minor - Degree Program)  
+**Project:** MRI-to-CT Image Translation using Deep Learning
 
-# 1. U-Net with Local Decoder (Best Performer)
- * Architecture: Dual-component design featuring a standard U-Net encoder coupled with a specialized local decoder.
+---
 
-* Key Insight: Achieved the best overall performance by incorporating refinement layers for enhanced fine anatomical detail preservation, successfully capturing subtle tissue boundaries.
+# Project Overview
 
-* Loss Function: L1 loss(lambda=1.0) + SSIM loss(lambda=0.5)
+Radiotherapy treatment planning typically requires **both MRI and CT scans**.
 
-* Parameters: approx. 31 million
+CT scans provide **electron density information** needed for dose calculation, while MRI provides **better soft tissue contrast**.
 
-# 2. U-Net with Pix2Pix PatchGAN Discriminator (Most Consistent)
+This project investigates **MRI-only radiotherapy planning** by generating **synthetic CT (sCT)** images directly from MRI scans using deep learning.
 
-* Architecture: A sophisticated Adversarial Training approach, combining a U-Net generator with a multi-scale PatchGAN discriminator.
+### Goals
 
-* Key Insight: Demonstrated high consistency and reliability, successfully balancing pixel-wise accuracy with perceptual quality typical of GANs.
+• Eliminate CT acquisition  
+• Reduce patient radiation exposure  
+• Avoid MRI–CT registration errors  
+• Improve radiotherapy workflow efficiency  
 
-* Loss Function: L1 loss(lambda=300) + Feature matching(lambda=20) + Gradient difference loss(lambda=50)
+---
 
-* Parameters: approx 31 million
+# Interactive Demo
 
-# 3. Turbo U-Net with Multi-Scale Discriminator (Most Efficient)
+The project includes an **interactive Streamlit application**.
 
-* Architecture: An optimized U-Net design incorporating residual blocks for improved gradient flow and an efficient four-stage encoder-decoder structure.
+Users can:
 
-* Key Insight: This architecture is highly computationally efficient with a significantly reduced parameter count, making it suitable for resource-constrained environments.
+• Upload MRI slices (.png)  
+• Upload MRI volumes (.nii)  
+• Generate synthetic CT images  
+• Compare MRI vs CT using an interactive slider  
+• Visualize model performance metrics  
 
-* Loss Function: L1 loss(lambda=0.5) + SSIM loss(lambda=0.3) + MS-SSIM loss(lambda=0.2) + Adversarial loss(lambda=1.0)
+### Demo Interface
 
-* Parameters: approx 8 million
-
-
-# Performance Summary
-- The models were evaluated on the Test Set (3,120 slices) using standard medical image quality metrics: SSIM, PSNR (dB), and MAE (HU).
-1) U-Net + Local Decoder : Test SSIM = 0.8725 (Highest) | Test PSNR (dB) = 25.17 | Test MAE (HU) = 69 
-2) U-Net + PatchGAN  :  Test SSIM = 0.93-0.95(range) | Test PSNR (dB) = 26.04 | Test MAE (HU) = 39.07 (lowest)
-3) Turbo U-Net   :  Test SSIM = 0.8118 | Test PSNR (dB) = 22.88 | Test MAE (HU) = 95.13
-
-# Performance Insights:
-- Best Overall: The U-Net with Local Decoder achieved the highest structural similarity ({SSIM} = 0.8725) and superior detail preservation, but the U-Net with PatchGAN is equally critical, achieving the lowest $\{MAE} = (39.07 HU ) required for precise dose calculation.
-- Reliability: The U-Net with PatchGAN demonstrated the most reliable consistency and lowest MAE.
-- Efficiency: The Turbo U-Net offers an excellent accuracy-efficiency trade-off, with only 8 million parameters.
-- Clinical Viability: All models maintained {MAE} < 100 HU , validating their potential for clinical dose calculation accuracy.
+    Upload MRI
+    ↓
+    Model Inference
+    ↓
+    Synthetic CT
+    ↓
+    Interactive Comparison
 
 
+---
+
+## Example Results
+
+| MRI | Ground Truth CT | Generated CT |
+|-----|-----------------|--------------|
+| ![](results/pix2pix_unet/test_sample_1.png) | ![](results/pix2pix_unet/test_sample_2.png) | ![](results/pix2pix_unet/test_sample_3.png) |
+---
+
+# Dataset
+
+**Dataset**
+
+181 paired brain MRI–CT scans.
+
+**Medical imaging format**
+     
+     NIfTI (.nii)
+
+ 
+### Processed Dataset
+
+21,183 2D slices extracted from MRI–CT pairs.
+
+### Data Split
+
+| Split | Percentage |
+|-------|------------|
+| Training | 70% |
+| Validation | 15% |
+| Test | 15% |
+
+Splitting was performed **patient-wise** to avoid data leakage.
+
+---
+
+# Preprocessing Pipeline
+
+    MRI Volume
+    ↓
+    Slice Extraction
+    ↓
+    Resize to 256×256
+    ↓
+    Intensity Clipping
+    ↓
+    Normalization [-1,1]
+
+
+---
+
+# Model Architectures
+
+Three deep learning architectures were implemented.
+
+---
+
+## 1. U-Net with Local Decoder
+
+Improves **fine anatomical detail reconstruction**.
+
+### Architecture
+
+    Encoder → Bottleneck → Local Decoder → CT Output
+
+**Loss**
+L1 Loss
++
+SSIM Loss
+
+
+**Parameters**
+  - 31M
+
+---
+
+## 2. Pix2Pix U-Net with PatchGAN
+
+GAN-based model for **high perceptual realism**.
+
+### Architecture
+
+    MRI → U-Net Generator → Synthetic CT
+    ↑
+    PatchGAN Discriminator
+
+**Loss**
+L1 Loss
+Feature Matching
+Gradient Difference Loss
+
+
+**Parameters**
+ - 31M
+
+---
+
+## 3. Turbo U-Net
+
+Lightweight architecture optimized for **efficiency**.
+
+### Architecture
+
+    Residual Encoder → Efficient Decoder → CT
+
+**Loss**
+L1 + SSIM + MS-SSIM + Adversarial
+
+
+**Parameters**
+  - 8M
+
+---
+
+# Performance Evaluation
+
+Models were evaluated on **3,120 test slices**.
+
+### Evaluation Metrics
+
+• SSIM  
+• PSNR  
+• MAE (Hounsfield Units)
+
+| Model | SSIM | PSNR | MAE  |
+|-------|------|------|------|
+| U-Net + Local Decoder | 0.8725 | 25.17 | 69 HU |
+| Pix2Pix PatchGAN | **0.93–0.95** | **26.04** | **39.07 HU** |
+| Turbo U-Net | 0.8118 | 22.88 | 95.13 HU |
+
+---
+
+# Performance Insights
+
+**Best Detail Preservation**
+
+U-Net + Local Decoder achieved the highest structural similarity.
+
+**Most Reliable**
+
+Pix2Pix PatchGAN achieved the **lowest MAE**.
+
+**Most Efficient**
+
+Turbo U-Net reduced parameters by **75%** while maintaining acceptable accuracy.
+
+---
+
+# Project Structure
+
+    Capstone-Project
+    │
+    ├── app
+    │ └── app.py # Streamlit application
+    │
+    ├── src
+    │ ├── model.py # Model architectures
+    │ ├── inference.py # Model inference
+    │ └── preprocess.py # Data preprocessing
+    │
+    ├── models
+    │ └── best_model_G.pth # Trained model
+    │
+    ├── results
+    │ ├── pix2pix_unet
+    │ │ ├── test_sample_1.png
+    │ │ ├── test_sample_2.png
+    │ │ └── ...
+    │ │
+    │ ├── training_history.json
+    │ └── test_set_results.json
+    │
+    ├── notebooks # Training notebooks
+    ├── requirements.txt
+    └── README.md
+
+
+---
+
+# Running the Application
+
+### Clone repository
+    git clone https://github.com/yourusername/capstone-project.git
+cd capstone-project
+
+### Install dependencies
+    pip install -r requirements.txt
+
+### Launch the demo
+    streamlit run app/app.py
+
+
+---
 
 # Future Work
-- To translate these research findings into clinical practice, the following directions are proposed:
-- Clinical Validation Studies: Conduct rigorous trials to assess the performance of sCTs in real-world radiotherapy treatment workflows.
-- Dosimetric Validation: Integrate the best-performing models directly with treatment planning systems to confirm that the low {MAE} values translate into acceptable dose distributions.
-- Generalizability: Validate the models on large, diverse datasets from multiple institutions to ensure robustness across different scanner types and imaging protocols.
-- Anatomical Extension: Adapt and validate the models for other anatomical regions (e.g., pelvis or abdomen) where {MRI-only} workflows are also highly beneficial.
+
+To translate these research results into clinical practice:
+
+### Clinical Validation
+
+Evaluate performance within real radiotherapy treatment workflows.
+
+### Dosimetric Validation
+
+Verify that synthetic CT images produce acceptable dose distributions.
+
+### Multi-Institution Training
+
+Improve generalization using larger datasets.
+
+### Multi-Region Extension
+
+Extend the method to:
+
+• pelvis  
+• abdomen  
+• thorax  
+
+---
+
+# Technologies Used
+
+| Tool | Purpose |
+|------|---------|
+| PyTorch | Deep learning framework |
+| Streamlit | Interactive web application |
+| Nibabel | Medical image processing |
+| NumPy | Numerical computation |
+| Matplotlib | Visualization |
+
+---
+
+# Acknowledgements
+
+This project was developed as part of the **IIT Mandi Online Minor - Degree Capstone Project**.
+
+The work demonstrates the potential of deep learning for improving **medical imaging workflows in radiotherapy planning**.
+
+## Pipeline
+
+<p align="center">
+  <img src="assets/pipeline.png" width="800">
+</p>
+
+<p align="center">
+<b>Figure 1:</b> End-to-end pipeline for generating synthetic CT from MRI.
+</p>
+
+## Model Architecture
+
+<p align="center">
+  <img src="assets/model_architecture.png" width="800">
+</p>
+
+<p align="center">
+<b>Figure 2:</b> Generator–discriminator architecture used for MRI-to-CT translation.
+</p>
+
+## Example Results
+
+<p align="center">
+  <img src="assets/sample_results.png" width="800">
+</p>
+
+<p align="center">
+<b>Figure 3:</b> Example MRI input, ground truth CT, and generated synthetic CT.
+</p>

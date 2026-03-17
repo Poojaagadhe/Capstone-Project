@@ -10,11 +10,28 @@ import random
 import matplotlib.pyplot as plt
 from PIL import Image
 import torch
+import time
 
 from streamlit_image_comparison import image_comparison
 
 from src.inference import load_model, generate_ct
 from src.preprocess import preprocess_image
+
+
+# -------------------------------------------------------
+# SAFE NORMALIZATION FUNCTION
+# -------------------------------------------------------
+def normalize_image(img):
+
+    img = img.astype("float32")
+
+    min_val = np.min(img)
+    max_val = np.max(img)
+
+    if max_val - min_val < 1e-8:
+        return np.zeros_like(img)
+
+    return (img - min_val) / (max_val - min_val)
 
 
 # -------------------------------------------------------
@@ -30,7 +47,7 @@ torch.set_num_threads(1)
 
 
 # -------------------------------------------------------
-# LOAD MODEL (cached)
+# LOAD MODEL
 # -------------------------------------------------------
 @st.cache_resource
 def get_model():
@@ -74,38 +91,68 @@ with tab_demo:
 
         filename = uploaded_file.name.lower()
 
-        # ---------------- PNG MRI ----------------
+        # ------------------------------------------------
+        # PNG MRI
+        # ------------------------------------------------
         if filename.endswith(".png"):
 
             image = Image.open(uploaded_file).convert("L")
             image_np = np.array(image)
 
-            image_np = (image_np - image_np.min()) / (image_np.max() - image_np.min() + 1e-8)
+            # resize for model
+            image_np = np.array(
+                Image.fromarray(image_np).resize((256,256))
+            )
+
+            image_np = normalize_image(image_np)
 
             tensor = preprocess_image(image_np)
+
+            start = time.time()
 
             with st.spinner("Generating synthetic CT..."):
                 output = generate_ct(model, tensor)
 
-            ct_img = output.squeeze().cpu().numpy()
+            inference_time = time.time() - start
 
-            ct_img = (ct_img - ct_img.min()) / (ct_img.max() - ct_img.min() + 1e-8)
+            ct_img = output.squeeze().detach().cpu().numpy()
+            ct_img = normalize_image(ct_img)
+
+            # ensure same size
+            if image_np.shape != ct_img.shape:
+                image_np = np.array(
+                    Image.fromarray(image_np).resize(ct_img.shape[::-1])
+                )
+
+            # convert for display
+            mri_display = (image_np * 255).astype(np.uint8)
+            ct_display = (ct_img * 255).astype(np.uint8)
 
             col1, col2 = st.columns(2)
 
             with col1:
-                st.image(image_np, caption="Input MRI", use_container_width=True)
+                st.image(mri_display, caption="Input MRI", width="stretch")
 
             with col2:
-                st.image(ct_img, caption="Generated CT", use_container_width=True)
+                st.image(ct_display, caption="Generated CT", width="stretch")
+
+            st.success(f"Inference time: {inference_time:.3f} seconds")
 
             image_comparison(
-                img1=image_np,
-                img2=ct_img,
+                img1=mri_display,
+                img2=ct_display,
                 label1="MRI",
                 label2="Synthetic CT"
             )
 
+            # download CT
+            st.download_button(
+                "Download Generated CT",
+                data=Image.fromarray(ct_display).tobytes(),
+                file_name="synthetic_ct.png"
+            )
+
+            # heatmap
             if show_heatmap:
 
                 diff = np.abs(ct_img - image_np)
@@ -118,7 +165,9 @@ with tab_demo:
                 plt.close()
 
 
-        # ---------------- NIfTI MRI ----------------
+        # ------------------------------------------------
+        # NIfTI MRI
+        # ------------------------------------------------
         else:
 
             volume = nib.load(uploaded_file).get_fdata()
@@ -132,28 +181,45 @@ with tab_demo:
 
             slice_img = volume[:, :, slice_index]
 
-            slice_img = (slice_img - slice_img.min()) / (slice_img.max() - slice_img.min() + 1e-8)
+            slice_img = np.array(
+                Image.fromarray(slice_img).resize((256,256))
+            )
+
+            slice_img = normalize_image(slice_img)
 
             tensor = preprocess_image(slice_img)
+
+            start = time.time()
 
             with st.spinner("Generating synthetic CT..."):
                 output = generate_ct(model, tensor)
 
-            ct_img = output.squeeze().cpu().numpy()
+            inference_time = time.time() - start
 
-            ct_img = (ct_img - ct_img.min()) / (ct_img.max() - ct_img.min() + 1e-8)
+            ct_img = output.squeeze().detach().cpu().numpy()
+            ct_img = normalize_image(ct_img)
+
+            if slice_img.shape != ct_img.shape:
+                slice_img = np.array(
+                    Image.fromarray(slice_img).resize(ct_img.shape[::-1])
+                )
+
+            mri_display = (slice_img * 255).astype(np.uint8)
+            ct_display = (ct_img * 255).astype(np.uint8)
 
             col1, col2 = st.columns(2)
 
             with col1:
-                st.image(slice_img, caption="MRI Slice", use_container_width=True)
+                st.image(mri_display, caption="MRI Slice", width="stretch")
 
             with col2:
-                st.image(ct_img, caption="Generated CT", use_container_width=True)
+                st.image(ct_display, caption="Generated CT", width="stretch")
+
+            st.success(f"Inference time: {inference_time:.3f} seconds")
 
             image_comparison(
-                img1=slice_img,
-                img2=ct_img,
+                img1=mri_display,
+                img2=ct_display,
                 label1="MRI",
                 label2="Synthetic CT"
             )
@@ -193,23 +259,17 @@ with tab_examples:
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.image(mri, caption="Input MRI", use_container_width=True)
+                st.image(mri, caption="Input MRI", width="stretch")
 
             with col2:
-                st.image(gt_ct, caption="Ground Truth CT", use_container_width=True)
+                st.image(gt_ct, caption="Ground Truth CT", width="stretch")
 
             with col3:
-                st.image(pred_ct, caption="Predicted CT", use_container_width=True)
+                st.image(pred_ct, caption="Predicted CT", width="stretch")
 
             if st.button("Show Another Example"):
                 st.session_state.example_sample = random.choice(samples)
                 st.rerun()
-
-        else:
-            st.info("No example images found.")
-
-    else:
-        st.info("Results folder not available.")
 
 
 # =======================================================
@@ -234,27 +294,19 @@ with tab_dashboard:
             st.line_chart(history["generator_loss"])
 
         ssim_mean = results.get("ssim", {}).get("mean")
-        ssim_std = results.get("ssim", {}).get("std")
-
         psnr_mean = results.get("psnr", {}).get("mean")
-        psnr_std = results.get("psnr", {}).get("std")
-
         mae_mean = results.get("mae", {}).get("mean")
-        mae_std = results.get("mae", {}).get("std")
 
-        m1, m2, m3 = st.columns(3)
+        c1, c2, c3 = st.columns(3)
 
         if ssim_mean:
-            m1.metric("SSIM", f"{ssim_mean:.3f}", f"±{ssim_std:.3f}")
+            c1.metric("SSIM", f"{ssim_mean:.3f}")
 
         if psnr_mean:
-            m2.metric("PSNR", f"{psnr_mean:.2f} dB", f"±{psnr_std:.2f}")
+            c2.metric("PSNR", f"{psnr_mean:.2f} dB")
 
         if mae_mean:
-            m3.metric("MAE", f"{mae_mean:.2f} HU", f"±{mae_std:.2f}")
-
-    else:
-        st.info("Training metrics not available.")
+            c3.metric("MAE", f"{mae_mean:.2f} HU")
 
 
 # =======================================================
@@ -294,9 +346,3 @@ PatchGAN discriminator
 Framework: PyTorch
 """
         )
-
-
-
-
-
-

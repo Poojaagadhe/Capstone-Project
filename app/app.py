@@ -4,12 +4,12 @@ sys.path.append(os.path.abspath("."))
 
 import streamlit as st
 import numpy as np
-import torch
 import nibabel as nib
 import json
 import random
 import matplotlib.pyplot as plt
 from PIL import Image
+import torch
 
 from streamlit_image_comparison import image_comparison
 
@@ -17,9 +17,9 @@ from src.inference import load_model, generate_ct
 from src.preprocess import preprocess_image
 
 
-# ----------------------------------------------------
+# -------------------------------------------------------
 # PAGE CONFIG
-# ----------------------------------------------------
+# -------------------------------------------------------
 st.set_page_config(
     page_title="MRI → Synthetic CT Generator",
     page_icon="🧠",
@@ -29,9 +29,9 @@ st.set_page_config(
 torch.set_num_threads(1)
 
 
-# ----------------------------------------------------
+# -------------------------------------------------------
 # LOAD MODEL (cached)
-# ----------------------------------------------------
+# -------------------------------------------------------
 @st.cache_resource
 def get_model():
     return load_model()
@@ -39,26 +39,26 @@ def get_model():
 model = get_model()
 
 
-# ----------------------------------------------------
+# -------------------------------------------------------
 # HEADER
-# ----------------------------------------------------
+# -------------------------------------------------------
 st.title("MRI → Synthetic CT Generator")
-st.caption("Deep Learning system for MRI-only radiotherapy planning")
+st.caption("Deep learning system for MRI-only radiotherapy planning")
 
 st.divider()
 
 
-# ----------------------------------------------------
+# -------------------------------------------------------
 # TABS
-# ----------------------------------------------------
+# -------------------------------------------------------
 tab_demo, tab_examples, tab_dashboard, tab_info = st.tabs(
     ["Demo", "Examples", "Training Dashboard", "Model Info"]
 )
 
 
-# ====================================================
+# =======================================================
 # DEMO TAB
-# ====================================================
+# =======================================================
 with tab_demo:
 
     st.subheader("Upload MRI")
@@ -74,11 +74,13 @@ with tab_demo:
 
         filename = uploaded_file.name.lower()
 
-        # ---------- PNG ----------
+        # ---------------- PNG MRI ----------------
         if filename.endswith(".png"):
 
             image = Image.open(uploaded_file).convert("L")
             image_np = np.array(image)
+
+            image_np = (image_np - image_np.min()) / (image_np.max() - image_np.min() + 1e-8)
 
             tensor = preprocess_image(image_np)
 
@@ -86,6 +88,8 @@ with tab_demo:
                 output = generate_ct(model, tensor)
 
             ct_img = output.squeeze().cpu().numpy()
+
+            ct_img = (ct_img - ct_img.min()) / (ct_img.max() - ct_img.min() + 1e-8)
 
             col1, col2 = st.columns(2)
 
@@ -111,9 +115,10 @@ with tab_demo:
                 fig.colorbar(heat)
 
                 st.pyplot(fig)
+                plt.close()
 
 
-        # ---------- NII ----------
+        # ---------------- NIfTI MRI ----------------
         else:
 
             volume = nib.load(uploaded_file).get_fdata()
@@ -127,6 +132,8 @@ with tab_demo:
 
             slice_img = volume[:, :, slice_index]
 
+            slice_img = (slice_img - slice_img.min()) / (slice_img.max() - slice_img.min() + 1e-8)
+
             tensor = preprocess_image(slice_img)
 
             with st.spinner("Generating synthetic CT..."):
@@ -134,7 +141,6 @@ with tab_demo:
 
             ct_img = output.squeeze().cpu().numpy()
 
-             # normalize to 0-1
             ct_img = (ct_img - ct_img.min()) / (ct_img.max() - ct_img.min() + 1e-8)
 
             col1, col2 = st.columns(2)
@@ -153,9 +159,9 @@ with tab_demo:
             )
 
 
-# ====================================================
+# =======================================================
 # EXAMPLES TAB
-# ====================================================
+# =======================================================
 with tab_examples:
 
     st.subheader("Example Results")
@@ -172,8 +178,9 @@ with tab_examples:
                 st.session_state.example_sample = random.choice(samples)
 
             sample_file = st.session_state.example_sample
+            img_path = os.path.join(results_dir, sample_file)
 
-            example_img = Image.open(os.path.join(results_dir, sample_file))
+            example_img = Image.open(img_path).convert("RGB")
             example_np = np.array(example_img)
 
             width = example_np.shape[1]
@@ -205,9 +212,9 @@ with tab_examples:
         st.info("Results folder not available.")
 
 
-# ====================================================
+# =======================================================
 # TRAINING DASHBOARD
-# ====================================================
+# =======================================================
 with tab_dashboard:
 
     st.subheader("Training Metrics")
@@ -250,9 +257,9 @@ with tab_dashboard:
         st.info("Training metrics not available.")
 
 
-# ====================================================
+# =======================================================
 # MODEL INFO
-# ====================================================
+# =======================================================
 with tab_info:
 
     st.subheader("Model Information")
@@ -264,7 +271,7 @@ with tab_info:
 """
 Architecture  
 Pix2Pix U-Net Generator  
-Encoder-Decoder with skip connections
+Encoder-decoder with skip connections
 """
         )
 
@@ -274,7 +281,7 @@ Encoder-Decoder with skip connections
 Dataset  
 181 MRI-CT scans  
 21,183 slices  
-Resolution 256×256
+Resolution: 256×256
 """
         )
 
@@ -284,10 +291,9 @@ Resolution 256×256
 Training  
 L1 + Feature Matching loss  
 PatchGAN discriminator  
-PyTorch implementation
+Framework: PyTorch
 """
         )
-
 
 
 

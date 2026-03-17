@@ -1,12 +1,14 @@
+import sys
+import os
+sys.path.append(os.path.abspath("."))
+
 import streamlit as st
 import numpy as np
 import nibabel as nib
 import json
-import os
 import random
 import matplotlib.pyplot as plt
 from PIL import Image
-import torch
 
 from streamlit_image_comparison import image_comparison
 

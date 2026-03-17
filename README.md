@@ -247,6 +247,9 @@ cd capstone-project
 ### Launch the demo
     streamlit run app/app.py
 
+### deploy app link
+     https://capstone-project-nstcmnn9pf4qum29hf55ys.streamlit.app/
+
 
 ---
 
